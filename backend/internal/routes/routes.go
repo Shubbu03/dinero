@@ -95,6 +95,7 @@ func RegisterEnhancedRoutes(r chi.Router, db *gorm.DB) error {
 
 		r.Route("/wallet", func(r chi.Router) {
 			r.Get("/balance", transaction.GetBalanceHandler(db))
+			r.Post("/balance", transaction.AddBalanceHandler(db))
 		})
 	})
 
