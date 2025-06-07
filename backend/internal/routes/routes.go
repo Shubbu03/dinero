@@ -102,23 +102,25 @@ func RegisterEnhancedRoutes(r chi.Router, db *gorm.DB) error {
 }
 
 func getUserProfileHandler(w http.ResponseWriter, r *http.Request) {
-	user, ok := enhancedMiddleware.GetUserFromContext(r)
+	usr, ok := enhancedMiddleware.GetUserFromContext(r)
 	if !ok {
 		http.Error(w, "User not found in context", http.StatusInternalServerError)
 		return
 	}
 
 	response := map[string]interface{}{
-		"id":            user.ID,
-		"name":          user.Name,
-		"email":         user.Email,
-		"balance":       user.Balance,
-		"auth_provider": user.AuthProvider,
-		"avatar":        user.Avatar,
-		"created_at":    user.CreatedAt,
-		"updated_at":    user.UpdatedAt,
+		"id":            usr.ID,
+		"name":          usr.Name,
+		"email":         usr.Email,
+		"balance":       usr.Balance,
+		"auth_provider": usr.AuthProvider,
+		"avatar":        usr.Avatar,
+		"created_at":    usr.CreatedAt,
+		"updated_at":    usr.UpdatedAt,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
