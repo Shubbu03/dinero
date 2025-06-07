@@ -10,7 +10,7 @@ type Transaction struct {
 	gorm.Model
 	SenderID    uint
 	ReceiverID  uint
-	Amount      float64 `gorm:"not null"`
+	Amount      int64 `gorm:"not null"`
 	Description string
 	Timestamp   time.Time `gorm:"autoCreateTime"`
 
