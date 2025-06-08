@@ -1,3 +1,5 @@
+import { Landing } from "./(landing)/Landing";
+
 export default function Home() {
-  return <div>paytm frontend</div>;
+  return <Landing />;
 }
