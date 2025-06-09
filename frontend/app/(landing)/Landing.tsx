@@ -1,9 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ArrowRight, Wallet, Shield, Zap } from "lucide-react";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
-import { useRouter } from "next/navigation";
 
 export function Landing() {
   const router = useRouter();
