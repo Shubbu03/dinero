@@ -88,7 +88,6 @@ const Profile: React.FC<ProfileProps> = ({
             <button
               onClick={() => {
                 setShowProfileDropdown(false);
-                // Add settings navigation when ready
               }}
               className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-gray-50"
               style={{ color: "#000000" }}
