@@ -8,6 +8,7 @@ import BalanceCard from "@/components/BalanceCard";
 import RecentTransactionCard from "@/components/RecentTransactionCard";
 import { useCurrentUser } from "@/lib/hooks/useAuth";
 import { useTransactionHistory } from "@/lib/hooks/useTransactions";
+import FriendsCard from "@/components/FriendsCard";
 
 export default function DashboardPage() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -55,9 +56,16 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <BalanceCard balance={user.balance} />
-          <RecentTransactionCard transactions={transactions} />
+        <div className="max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-3 flex flex-col gap-2">
+              <BalanceCard balance={user.balance} />
+              <RecentTransactionCard transactions={transactions} />
+            </div>
+            <div>
+              <FriendsCard />
+            </div>
+          </div>
         </div>
 
         {showProfileDropdown && (
