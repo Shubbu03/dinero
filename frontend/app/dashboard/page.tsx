@@ -9,6 +9,7 @@ import RecentTransactionCard from "@/components/RecentTransactionCard";
 import { useCurrentUser } from "@/lib/hooks/useAuth";
 import { useTransactionHistory } from "@/lib/hooks/useTransactions";
 import FriendsCard from "@/components/FriendsCard";
+import { useFriends } from "@/lib/hooks/useUsers";
 
 export default function DashboardPage() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -20,6 +21,8 @@ export default function DashboardPage() {
   } = useCurrentUser();
   const { data: transactionData, isLoading: transactionsLoading } =
     useTransactionHistory(1, 10);
+
+  const { data: friends = [] } = useFriends();
 
   if (userLoading || transactionsLoading) {
     return <Loading />;
@@ -63,7 +66,7 @@ export default function DashboardPage() {
               <RecentTransactionCard transactions={transactions} />
             </div>
             <div>
-              <FriendsCard />
+              <FriendsCard friends={friends} />
             </div>
           </div>
         </div>
