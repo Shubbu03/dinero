@@ -1,53 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import apiService, { UserData, Transaction } from "../../lib/apiService";
+import { useState } from "react";
 import AuthWrapper from "@/components/AuthWrapper";
 import Profile from "@/components/Profile";
 import Loading from "@/components/Loading";
 import BalanceCard from "@/components/BalanceCard";
 import RecentTransactionCard from "@/components/RecentTransactionCard";
+import { useCurrentUser } from "@/lib/hooks/useAuth";
+import { useTransactionHistory } from "@/lib/hooks/useTransactions";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const [user, setUser] = useState<UserData | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userData = await apiService.getCurrentUser();
-        setUser(userData);
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const {
+    data: user,
+    isLoading: userLoading,
+    error: userError,
+  } = useCurrentUser();
+  const { data: transactionData, isLoading: transactionsLoading } =
+    useTransactionHistory(1, 10);
 
-    const fetchTransactions = async () => {
-      try {
-        const transactionData = await apiService.getTransactionHistory(1, 10);
-        setTransactions(transactionData.transactions || []);
-      } catch (error) {
-        console.error("Failed to fetch transactions:", error);
-      }
-    };
-
-    fetchUserData();
-    fetchTransactions();
-  }, [router]);
-
-  if (loading) {
+  if (userLoading || transactionsLoading) {
     return <Loading />;
   }
 
-  if (!user) {
+  if (userError || !user) {
     return null;
   }
+
+  const transactions = transactionData?.transactions || [];
 
   return (
     <AuthWrapper requireAuth={true}>
@@ -75,7 +56,7 @@ export default function DashboardPage() {
         </header>
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <BalanceCard balance={user?.balance} />
+          <BalanceCard balance={user.balance} />
           <RecentTransactionCard transactions={transactions} />
         </div>
 
@@ -85,7 +66,6 @@ export default function DashboardPage() {
             onClick={() => setShowProfileDropdown(false)}
           />
         )}
-
       </div>
     </AuthWrapper>
   );
