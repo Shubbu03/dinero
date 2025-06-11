@@ -2,6 +2,7 @@ import apiService, { UserData } from "@/lib/apiService";
 import { User, ChevronDown, Settings, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
+import ThemeToggler from "./ThemeToggler";
 
 interface ProfileProps {
   user: UserData | null;
@@ -57,9 +58,9 @@ const Profile: React.FC<ProfileProps> = ({
             </div>
           </div>
 
-          <div className="p-2">
-            <div className="px-3 py-2">
-              <div className="flex justify-between mb-2">
+          <div className="p-4">
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between items-center">
                 <span className="text-sm" style={{ color: "#B6B09F" }}>
                   Account Type
                 </span>
@@ -70,7 +71,7 @@ const Profile: React.FC<ProfileProps> = ({
                   {user?.auth_provider}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-sm" style={{ color: "#B6B09F" }}>
                   User ID
                 </span>
@@ -83,30 +84,32 @@ const Profile: React.FC<ProfileProps> = ({
               </div>
             </div>
 
-            <hr className="my-2" style={{ borderColor: "#EAE4D5" }} />
+            <hr className="my-4" style={{ borderColor: "#EAE4D5" }} />
 
-            <button
-              onClick={() => {
-                setShowProfileDropdown(false);
-              }}
-              className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-gray-50"
-              style={{ color: "#000000" }}
-            >
-              <Settings className="w-4 h-4" />
-              <span className="text-sm">Settings</span>
-            </button>
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setShowProfileDropdown(false);
+                }}
+                className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-gray-50"
+                style={{ color: "#000000" }}
+              >
+                <Settings className="w-4 h-4" />
+                <span className="text-sm">Settings</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setShowProfileDropdown(false);
-                handleLogout();
-              }}
-              className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-gray-50"
-              style={{ color: "#000000" }}
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Logout</span>
-            </button>
+              <button
+                onClick={() => {
+                  setShowProfileDropdown(false);
+                  handleLogout();
+                }}
+                className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-gray-50"
+                style={{ color: "#000000" }}
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm">Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
