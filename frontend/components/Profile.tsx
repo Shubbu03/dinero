@@ -2,7 +2,6 @@ import apiService, { UserData } from "@/lib/apiService";
 import { User, ChevronDown, Settings, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
-import ThemeToggler from "./ThemeToggler";
 
 interface ProfileProps {
   user: UserData | null;
