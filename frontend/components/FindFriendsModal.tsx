@@ -9,6 +9,7 @@ import {
   useRemoveFriend,
 } from "@/lib/hooks/useUsers";
 import { UserData } from "@/lib/apiService";
+import { notify } from "@/lib/notify";
 
 interface FindFriendsModalProps {
   isOpen: boolean;
@@ -37,14 +38,14 @@ export default function FindFriendsModal({
 
       if (isFriend) {
         await removeFriendMutation.mutateAsync(user.id);
-        alert("Friend removed successfully!");
+        notify("Friend removed successfully!", "success");
       } else {
         await addFriendMutation.mutateAsync(user.id);
-        alert("Friend added successfully!");
+        notify("Friend added successfully!", "success");
       }
     } catch (error) {
       console.error("Failed to toggle friend:", error);
-      alert("Failed to update friend status. Please try again.");
+      notify("Failed to update friend status. Please try again.", "error");
     }
   };
 
