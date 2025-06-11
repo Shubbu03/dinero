@@ -10,37 +10,14 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useAddMoney } from "@/lib/hooks/useTransactions";
-import CryptoJS from "crypto-js";
-
-interface CardType {
-  cardNumber: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cvv: string;
-  holderName: string;
-  cardType: string;
-}
-const encryptCardData = (cardData: CardType) => {
-  const secretKey = process.env.NEXT_PUBLIC_CARD_ENCRYPTION_KEY;
-  if (!secretKey) {
-    throw new Error("Card encryption key is not configured");
-  }
-  return CryptoJS.AES.encrypt(JSON.stringify(cardData), secretKey).toString();
-};
+import { useCards, useAddMoneyWithCard } from "@/lib/hooks/useCards";
+import { AddCardRequest } from "@/lib/apiService";
+import { notify } from "@/lib/notify";
 
 interface AddMoneyModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentBalance: number;
-}
-
-interface CardData {
-  id: string;
-  maskedNumber: string;
-  holderName: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cardType: string;
 }
 
 interface NewCardForm {
@@ -72,26 +49,9 @@ export default function AddMoneyModal({
   const [detectedCardType, setDetectedCardType] = useState<string>("");
   const [useNewCard, setUseNewCard] = useState(false);
 
-  const [existingCards] = useState<CardData[]>([
-    {
-      id: "1",
-      maskedNumber: "VISA1234xxxx567",
-      holderName: "John Doe",
-      expiryMonth: "12",
-      expiryYear: "25",
-      cardType: "VISA",
-    },
-    {
-      id: "2",
-      maskedNumber: "MC5678xxxx901",
-      holderName: "John Doe",
-      expiryMonth: "08",
-      expiryYear: "26",
-      cardType: "MC",
-    },
-  ]);
-
-  const addMoneyMutation = useAddMoney();
+  const { data: existingCards = [], isLoading: cardsLoading } = useCards();
+  const addMoneyMutation = useAddMoney(); 
+  const addMoneyWithCardMutation = useAddMoneyWithCard();
 
   const paymentMethods = [
     {
@@ -149,7 +109,7 @@ export default function AddMoneyModal({
   const detectCardType = (number: string) => {
     const cleaned = number.replace(/\s/g, "");
     if (cleaned.startsWith("4")) return "VISA";
-    if (/^5[1-5]/.test(cleaned)) return "MC";
+    if (/^5[1-5]/.test(cleaned) || /^2[2-7]/.test(cleaned)) return "MC";
     if (/^3[47]/.test(cleaned)) return "AMEX";
     if (/^6011|^65/.test(cleaned)) return "DISC";
     return "";
@@ -173,7 +133,7 @@ export default function AddMoneyModal({
 
   const handleCardNumberChange = (value: string) => {
     const cleaned = value.replace(/\s/g, "");
-    if (cleaned.length <= 16 && /^\d*$/.test(cleaned)) {
+    if (cleaned.length <= 19 && /^\d*$/.test(cleaned)) {
       const formatted = formatCardNumber(cleaned);
       setNewCardForm((prev) => ({ ...prev, cardNumber: formatted }));
       setDetectedCardType(detectCardType(cleaned));
@@ -188,9 +148,11 @@ export default function AddMoneyModal({
       if (
         field === "expiryMonth" &&
         value.length <= 2 &&
-        (value === "" || parseInt(value) <= 12)
+        (value === "" || (parseInt(value) >= 1 && parseInt(value) <= 12))
       ) {
-        setNewCardForm((prev) => ({ ...prev, [field]: value }));
+        const paddedValue =
+          value.length === 1 && value !== "0" ? value.padStart(2, "0") : value;
+        setNewCardForm((prev) => ({ ...prev, [field]: paddedValue }));
       } else if (field === "expiryYear" && value.length <= 2) {
         setNewCardForm((prev) => ({ ...prev, [field]: value }));
       }
@@ -217,10 +179,10 @@ export default function AddMoneyModal({
       await addMoneyMutation.mutateAsync(amountInCents);
       setAmount("");
       onClose();
-      alert(`$${amount} added successfully via UPI!`);
+      notify(`$${amount} added successfully via UPI!`, "success");
     } catch (error) {
       console.error("Failed to add money:", error);
-      alert("Failed to add money. Please try again.");
+      notify("Failed to add money. Please try again.", "error");
     }
   };
 
@@ -234,55 +196,78 @@ export default function AddMoneyModal({
         const { cardNumber, expiryMonth, expiryYear, cvv, holderName } =
           newCardForm;
         if (!cardNumber || !expiryMonth || !expiryYear || !cvv || !holderName) {
-          alert("Please fill in all card details");
+          notify("Please fill in all card details", "warn");
           return;
         }
 
-        const cardData: CardType = {
-          cardNumber: cardNumber.replace(/\s/g, ""),
-          expiryMonth,
-          expiryYear,
+        const cardData: AddCardRequest = {
+          card_number: cardNumber.replace(/\s/g, ""),
+          expiry_month: expiryMonth.padStart(2, "0"),
+          expiry_year: expiryYear.padStart(2, "0"),
           cvv,
-          holderName,
-          cardType: detectedCardType,
+          holder_name: holderName.trim(),
         };
 
-        encryptCardData(cardData);
+        console.log("🔍 Sending card data to backend:", {
+          card_number_length: cardData.card_number.length,
+          cvv_length: cardData.cvv.length,
+          card_data: {
+            ...cardData,
+            card_number:
+              cardData.card_number.substring(0, 4) +
+              "****" +
+              cardData.card_number.substring(12),
+          },
+        });
+
+        await addMoneyWithCardMutation.mutateAsync({
+          amount: amountInCents,
+          description: `Added $${amount} via new card`,
+          card_data: cardData,
+        });
+
       } else {
         if (!selectedExistingCard) {
-          alert("Please select a card");
+          notify("Please select a card", "warn");
           return;
         }
-        console.log("Using existing card:", {
-          cardId: selectedExistingCard,
+
+        await addMoneyWithCardMutation.mutateAsync({
           amount: amountInCents,
+          description: `Added $${amount} via saved card`,
+          card_id: parseInt(selectedExistingCard),
         });
       }
 
-      // For now, we'll use the existing addMoney endpoint
-      // In a real app, this would be a new endpoint that handles card payments
-      await addMoneyMutation.mutateAsync(amountInCents);
-
       setAmount("");
       onClose();
-      alert(`$${amount} added successfully!`);
+      notify(`$${amount} added successfully!`, "success");
     } catch (error) {
       console.error("Failed to add money:", error);
-      alert("Failed to add money. Please try again.");
+      notify(
+        `Failed to add money: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "error"
+      );
     }
   };
 
   const isNewCardFormValid = () => {
     const { cardNumber, expiryMonth, expiryYear, cvv, holderName } =
       newCardForm;
+    const cleanedCardNumber = cardNumber.replace(/\s/g, "");
     return (
-      cardNumber.replace(/\s/g, "").length >= 13 &&
+      cleanedCardNumber.length >= 13 &&
+      cleanedCardNumber.length <= 19 &&
       expiryMonth &&
       parseInt(expiryMonth) >= 1 &&
       parseInt(expiryMonth) <= 12 &&
       expiryYear &&
       parseInt(expiryYear) >= 0 &&
+      parseInt(expiryYear) <= 99 &&
       cvv.length >= 3 &&
+      cvv.length <= 4 &&
       holderName.trim().length >= 2
     );
   };
@@ -309,7 +294,12 @@ export default function AddMoneyModal({
   };
 
   const isButtonDisabled = () => {
-    if (!amount || parseFloat(amount) <= 0 || addMoneyMutation.isPending) {
+    if (
+      !amount ||
+      parseFloat(amount) <= 0 ||
+      addMoneyMutation.isPending ||
+      addMoneyWithCardMutation.isPending
+    ) {
       return true;
     }
 
@@ -557,123 +547,142 @@ export default function AddMoneyModal({
                   Existing Cards
                 </h3>
 
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      setShowExistingDropdown(!showExistingDropdown);
-                      if (!showExistingDropdown) {
-                        setUseNewCard(false);
-                      }
-                    }}
-                    className="w-full flex items-center justify-between p-3 border rounded-lg"
-                    style={{
-                      borderColor: "#EAE4D5",
-                      backgroundColor: "#F8F8F8",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: selectedExistingCard ? "#000000" : "#B6B09F",
-                      }}
-                    >
-                      {selectedExistingCard
-                        ? existingCards.find(
-                            (card) => card.id === selectedExistingCard
-                          )?.maskedNumber
-                        : "Select a saved card"}
-                    </span>
-                    <ChevronDown
-                      className="w-5 h-5"
-                      style={{ color: "#B6B09F" }}
-                    />
-                  </button>
-
-                  {showExistingDropdown && (
-                    <div
-                      className="absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto"
-                      style={{
-                        backgroundColor: "#FFFFFF",
-                        borderColor: "#EAE4D5",
-                      }}
-                    >
-                      {existingCards.map((card) => (
-                        <button
-                          key={card.id}
-                          onClick={() => {
-                            setSelectedExistingCard(card.id);
-                            setUseNewCard(false);
-                            setShowExistingDropdown(false);
-                          }}
-                          className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="text-left">
-                            <p
-                              className="font-medium"
-                              style={{ color: "#000000" }}
-                            >
-                              {card.maskedNumber}
-                            </p>
-                            <p className="text-sm" style={{ color: "#B6B09F" }}>
-                              {card.holderName} • {card.expiryMonth}/
-                              {card.expiryYear}
-                            </p>
-                          </div>
-                          <span
-                            className="text-xs px-2 py-1 rounded"
-                            style={{
-                              backgroundColor: "#F8F8F8",
-                              color: "#000000",
-                            }}
-                          >
-                            {card.cardType}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {selectedExistingCard && !useNewCard && (
-                  <div
-                    className="p-4 rounded-lg border"
-                    style={{
-                      borderColor: "#000000",
-                      backgroundColor: "#F8F8F8",
-                    }}
-                  >
-                    <p className="text-sm" style={{ color: "#B6B09F" }}>
-                      Selected Card
-                    </p>
-                    {(() => {
-                      const card = existingCards.find(
-                        (c) => c.id === selectedExistingCard
-                      );
-                      return card ? (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p
-                              className="font-medium"
-                              style={{ color: "#000000" }}
-                            >
-                              {card.maskedNumber}
-                            </p>
-                            <p className="text-sm" style={{ color: "#B6B09F" }}>
-                              {card.holderName}
-                            </p>
-                          </div>
-                          <span
-                            className="text-xs px-2 py-1 rounded"
-                            style={{
-                              backgroundColor: "#000000",
-                              color: "#F2F2F2",
-                            }}
-                          >
-                            {card.cardType}
-                          </span>
-                        </div>
-                      ) : null;
-                    })()}
+                {cardsLoading ? (
+                  <div className="p-4 text-center" style={{ color: "#B6B09F" }}>
+                    Loading your saved cards...
                   </div>
+                ) : existingCards.length === 0 ? (
+                  <div className="p-4 text-center" style={{ color: "#B6B09F" }}>
+                    No saved cards found. Add a new card below.
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          setShowExistingDropdown(!showExistingDropdown);
+                          if (!showExistingDropdown) {
+                            setUseNewCard(false);
+                          }
+                        }}
+                        className="w-full flex items-center justify-between p-3 border rounded-lg"
+                        style={{
+                          borderColor: "#EAE4D5",
+                          backgroundColor: "#F8F8F8",
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: selectedExistingCard ? "#000000" : "#B6B09F",
+                          }}
+                        >
+                          {selectedExistingCard
+                            ? existingCards.find(
+                                (card) =>
+                                  card.id.toString() === selectedExistingCard
+                              )?.masked_number
+                            : "Select a saved card"}
+                        </span>
+                        <ChevronDown
+                          className="w-5 h-5"
+                          style={{ color: "#B6B09F" }}
+                        />
+                      </button>
+
+                      {showExistingDropdown && (
+                        <div
+                          className="absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto"
+                          style={{
+                            backgroundColor: "#FFFFFF",
+                            borderColor: "#EAE4D5",
+                          }}
+                        >
+                          {existingCards.map((card) => (
+                            <button
+                              key={card.id}
+                              onClick={() => {
+                                setSelectedExistingCard(card.id.toString());
+                                setUseNewCard(false);
+                                setShowExistingDropdown(false);
+                              }}
+                              className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="text-left">
+                                <p
+                                  className="font-medium"
+                                  style={{ color: "#000000" }}
+                                >
+                                  {card.masked_number}
+                                </p>
+                                <p
+                                  className="text-sm"
+                                  style={{ color: "#B6B09F" }}
+                                >
+                                  {card.holder_name} • {card.expiry_month}/
+                                  {card.expiry_year}
+                                </p>
+                              </div>
+                              <span
+                                className="text-xs px-2 py-1 rounded"
+                                style={{
+                                  backgroundColor: "#F8F8F8",
+                                  color: "#000000",
+                                }}
+                              >
+                                {card.card_type}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedExistingCard && !useNewCard && (
+                      <div
+                        className="p-4 rounded-lg border"
+                        style={{
+                          borderColor: "#000000",
+                          backgroundColor: "#F8F8F8",
+                        }}
+                      >
+                        <p className="text-sm" style={{ color: "#B6B09F" }}>
+                          Selected Card
+                        </p>
+                        {(() => {
+                          const card = existingCards.find(
+                            (c) => c.id.toString() === selectedExistingCard
+                          );
+                          return card ? (
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p
+                                  className="font-medium"
+                                  style={{ color: "#000000" }}
+                                >
+                                  {card.masked_number}
+                                </p>
+                                <p
+                                  className="text-sm"
+                                  style={{ color: "#B6B09F" }}
+                                >
+                                  {card.holder_name}
+                                </p>
+                              </div>
+                              <span
+                                className="text-xs px-2 py-1 rounded"
+                                style={{
+                                  backgroundColor: "#000000",
+                                  color: "#F2F2F2",
+                                }}
+                              >
+                                {card.card_type}
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -853,13 +862,14 @@ export default function AddMoneyModal({
           <button
             onClick={handleButtonClick}
             disabled={isButtonDisabled()}
-            className="w-full bg-black text-white py-3 rounded-lg font-medium transition-all hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            className="w-full bg-black text-white py-3 rounded-lg font-medium transition-all hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center space-x-2"
             style={{
               backgroundColor: isButtonDisabled() ? "#D1D5DB" : "#000000",
               color: "#F2F2F2",
             }}
           >
-            {addMoneyMutation.isPending ? (
+            {addMoneyMutation.isPending ||
+            addMoneyWithCardMutation.isPending ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             ) : (
               <>
