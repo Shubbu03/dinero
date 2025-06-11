@@ -105,6 +105,7 @@ func shouldRunMigrations() bool {
 func runMigrations(database *gorm.DB) error {
 	return database.AutoMigrate(
 		&models.User{},
+		&models.Card{},
 		&models.Transaction{},
 	)
 }
