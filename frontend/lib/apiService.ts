@@ -35,14 +35,22 @@ export interface UserData {
   updated_at: string;
 }
 
+export interface CommonUserDetails {
+  id: number;
+  name: string;
+  email: string;
+}
+
 export interface Transaction {
   id: number;
+  sender_id: number;
+  receiver_id: number;
   amount: number;
-  type: "sent" | "received" | "self";
-  from_user: string;
-  to_user: string;
+  description: string;
+  type: string;
   timestamp: string;
-  status: string;
+  sender: CommonUserDetails;
+  receiver: CommonUserDetails;
 }
 
 export interface TransactionHistory {

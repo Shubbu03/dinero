@@ -63,7 +63,10 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-3 flex flex-col gap-2">
               <BalanceCard balance={user.balance} />
-              <RecentTransactionCard transactions={transactions} />
+              <RecentTransactionCard
+                transactions={transactions}
+                currentUserID={user.id}
+              />
             </div>
             <div>
               <FriendsCard friends={friends} />
