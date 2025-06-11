@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { notify } from "./notify";
 
 export interface ApiResponse<T = unknown> {
   data?: T;
@@ -37,7 +38,7 @@ export interface UserData {
 export interface Transaction {
   id: number;
   amount: number;
-  type: "sent" | "received";
+  type: "sent" | "received" | "self";
   from_user: string;
   to_user: string;
   timestamp: string;
@@ -49,6 +50,41 @@ export interface TransactionHistory {
   total: number;
   page: number;
   limit: number;
+}
+
+export interface CardData {
+  id: number;
+  masked_number: string;
+  card_type: string;
+  holder_name: string;
+  expiry_month: string;
+  expiry_year: string;
+  is_active: boolean;
+  created_at: string;
+  last_used_at?: string;
+}
+
+export interface AddCardRequest {
+  card_number: string;
+  expiry_month: string;
+  expiry_year: string;
+  cvv: string;
+  holder_name: string;
+}
+
+export interface AddMoneyWithCardRequest {
+  amount: number;
+  description: string;
+  card_id?: number;
+  card_data?: AddCardRequest;
+}
+
+export interface AddMoneyResponse {
+  message: string;
+  amount: number;
+  fee: number;
+  new_balance: number;
+  transaction_id: number;
 }
 
 class ApiService {
@@ -162,7 +198,7 @@ class ApiService {
     try {
       await this.api.post("/auth/logout");
     } catch (error) {
-      console.error("Logout API call failed:", error);
+      notify(`Error occured while logging out: ${error}`, "error");
     } finally {
       this.clearAuthData();
     }
@@ -233,15 +269,15 @@ class ApiService {
   async sendMoney(
     recipientId: number,
     amount: number,
-    note?: string
+    description?: string
   ): Promise<Transaction> {
     try {
       const response: AxiosResponse<Transaction> = await this.api.post(
         "/api/transactions/send",
         {
-          recipient_id: recipientId,
+          receiver_id: recipientId,
           amount,
-          note,
+          description,
         }
       );
       return response.data;
@@ -320,6 +356,61 @@ class ApiService {
     } catch (error: unknown) {
       throw new Error(
         error instanceof Error ? error.message : "Failed to remove friend"
+      );
+    }
+  }
+
+  async getCards(): Promise<CardData[]> {
+    try {
+      const response: AxiosResponse<{ cards: CardData[] }> = await this.api.get(
+        "/api/cards"
+      );
+      return response.data.cards || [];
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to fetch cards"
+      );
+    }
+  }
+
+  async addCard(cardData: AddCardRequest): Promise<CardData> {
+    try {
+      const response: AxiosResponse<CardData> = await this.api.post(
+        "/api/cards",
+        cardData
+      );
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to add card"
+      );
+    }
+  }
+
+  async deleteCard(cardId: number): Promise<{ message: string }> {
+    try {
+      const response: AxiosResponse<{ message: string }> =
+        await this.api.delete(`/api/cards/${cardId}`);
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to delete card"
+      );
+    }
+  }
+
+  async addMoneyWithCard(
+    request: AddMoneyWithCardRequest
+  ): Promise<AddMoneyResponse> {
+    try {
+      const response: AxiosResponse<AddMoneyResponse> = await this.api.post(
+        "/api/cards/add-money",
+        request
+      );
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to add money with card"
       );
     }
   }
