@@ -1,6 +1,6 @@
 import { Transaction } from "@/lib/apiService";
 import { ArrowUpRight, ArrowDownLeft, History, Plus } from "lucide-react";
-import router from "next/router";
+import { useRouter } from "next/navigation";
 
 interface RecentTransactionCardProps {
   transactions: Transaction[];
@@ -10,6 +10,8 @@ const RecentTransactionCard: React.FC<RecentTransactionCardProps> = ({
   transactions,
   currentUserID,
 }) => {
+  const router = useRouter();
+
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
@@ -17,8 +19,8 @@ const RecentTransactionCard: React.FC<RecentTransactionCardProps> = ({
           Recent Transactions
         </h3>
         <button
-          onClick={() => router.push("/history")}
-          className="text-sm font-medium hover:underline"
+          onClick={() => router.push("/transaction-history")}
+          className="text-sm font-medium hover:underline cursor-pointer"
           style={{ color: "#B6B09F" }}
         >
           View All
