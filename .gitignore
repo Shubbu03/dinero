@@ -33,6 +33,7 @@ frontend/out/
 *.dll
 *.so
 *.dylib
+backend/avatars/
 
 # Go build output
 **/go.sum
