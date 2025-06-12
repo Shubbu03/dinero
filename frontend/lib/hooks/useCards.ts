@@ -37,20 +37,6 @@ export const useAddCard = () => {
   });
 };
 
-export const useDeleteCard = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (cardId: number) => apiService.deleteCard(cardId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: cardKeys.all });
-    },
-    onError: (error) => {
-      console.error("Failed to delete card:", error);
-    },
-  });
-};
-
 export const useAddMoneyWithCard = () => {
   const queryClient = useQueryClient();
 

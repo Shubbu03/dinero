@@ -395,18 +395,6 @@ class ApiService {
     }
   }
 
-  async deleteCard(cardId: number): Promise<{ message: string }> {
-    try {
-      const response: AxiosResponse<{ message: string }> =
-        await this.api.delete(`/api/cards/${cardId}`);
-      return response.data;
-    } catch (error: unknown) {
-      throw new Error(
-        error instanceof Error ? error.message : "Failed to delete card"
-      );
-    }
-  }
-
   async addMoneyWithCard(
     request: AddMoneyWithCardRequest
   ): Promise<AddMoneyResponse> {
