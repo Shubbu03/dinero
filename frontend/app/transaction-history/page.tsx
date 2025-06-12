@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { updateCurrency } from "@/lib/currency";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -43,6 +44,7 @@ export default function TransactionHistory() {
   }
 
   const currentUserID = user.id;
+  const currency = user.currency || "USD";
 
   return (
     <div
@@ -134,16 +136,25 @@ export default function TransactionHistory() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p
-                    className={`font-semibold text-lg ${
-                      transaction.sender_id === currentUserID
-                        ? "text-red-600"
-                        : "text-green-600"
-                    }`}
-                  >
-                    {transaction.sender_id === currentUserID ? "-" : "+"}$
-                    {(transaction.amount / 100).toFixed(2)}
-                  </p>
+                  {(() => {
+                    const { amount, symbol } = updateCurrency(
+                      transaction.amount / 100,
+                      currency
+                    );
+                    return (
+                      <p
+                        className={`font-semibold text-lg ${
+                          transaction.sender_id === currentUserID
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {transaction.sender_id === currentUserID ? "-" : "+"}
+                        {symbol}
+                        {amount.toFixed(2)}
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
             ))}

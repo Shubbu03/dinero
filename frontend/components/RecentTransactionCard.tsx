@@ -1,14 +1,17 @@
 import { Transaction } from "@/lib/apiService";
 import { ArrowUpRight, ArrowDownLeft, History, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { updateCurrency } from "@/lib/currency";
 
 interface RecentTransactionCardProps {
   transactions: Transaction[];
   currentUserID: number;
+  currency: string;
 }
 const RecentTransactionCard: React.FC<RecentTransactionCardProps> = ({
   transactions,
   currentUserID,
+  currency
 }) => {
   const router = useRouter();
 
@@ -48,27 +51,29 @@ const RecentTransactionCard: React.FC<RecentTransactionCardProps> = ({
               <div className="flex items-center space-x-3">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    transaction.sender_id === currentUserID
+                    transaction.type === "self"
+                      ? "bg-green-100"
+                      : transaction.sender_id === currentUserID
                       ? "bg-red-100"
                       : "bg-green-100"
                   }`}
                 >
-                  {transaction.sender_id === currentUserID ? (
+                  {transaction.type === "self" ? (
+                    <Plus className="w-5 h-5 text-green-600" />
+                  ) : transaction.sender_id === currentUserID ? (
                     <ArrowUpRight className="w-5 h-5 text-red-600" />
                   ) : transaction.receiver_id === currentUserID ? (
                     <ArrowDownLeft className="w-5 h-5 text-green-600" />
-                  ) : transaction.type === "self" ? (
-                    <Plus className="w-5 h-5 text-green-600" />
                   ) : null}
                 </div>
                 <div>
                   <p className="font-medium" style={{ color: "#000000" }}>
-                    {transaction.sender_id === currentUserID
+                    {transaction.type === "self"
+                      ? `Self`
+                      : transaction.sender_id === currentUserID
                       ? `To ${transaction.receiver.name}`
                       : transaction.receiver_id === currentUserID
                       ? `From ${transaction.sender.name}`
-                      : transaction.type === "self"
-                      ? `Self`
                       : null}
                   </p>
                   <p className="text-sm" style={{ color: "#B6B09F" }}>
@@ -77,16 +82,24 @@ const RecentTransactionCard: React.FC<RecentTransactionCardProps> = ({
                 </div>
               </div>
               <div className="text-right">
-                <p
-                  className={`font-semibold ${
-                    transaction.sender_id === currentUserID
-                      ? "text-red-600"
-                      : "text-green-600"
-                  }`}
-                >
-                  {transaction.sender_id === currentUserID ? "-" : "+"}$
-                  {(transaction.amount / 100).toFixed(2)}
-                </p>
+                {(() => {
+                  const { amount, symbol } = updateCurrency(transaction.amount / 100, currency);
+                  return (
+                    <p
+                      className={`font-semibold ${
+                        transaction.type === "self"
+                          ? "text-green-600"
+                          : transaction.sender_id === currentUserID
+                          ? "text-red-600"
+                          : "text-green-600"
+                      }`}
+                    >
+                      {transaction.type === "self" || transaction.receiver_id === currentUserID ? "+" : "-"}
+                      {symbol}
+                      {amount.toFixed(2)}
+                    </p>
+                  );
+                })()}
               </div>
             </div>
           ))}
