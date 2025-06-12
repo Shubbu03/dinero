@@ -6,7 +6,7 @@ import { UserData } from "@/lib/apiService";
 import { useSearchUsers } from "@/lib/hooks/useUsers";
 import { useSendMoney } from "@/lib/hooks/useTransactions";
 import { notify } from "@/lib/notify";
-import { updateCurrency } from "@/lib/currency";
+import { updateCurrency, convertToUSD, getCurrencySymbol } from "@/lib/currency";
 
 interface SendMoneyModalProps {
   isOpen: boolean;
@@ -62,7 +62,10 @@ export default function SendMoneyModal({
       return;
     }
 
-    const amountInCents = Math.round(parseFloat(amount) * 100);
+    const amountInUserCurrency = parseFloat(amount);
+    const amountInUSD = convertToUSD(amountInUserCurrency, currency);
+    const amountInCents = Math.round(amountInUSD * 100);
+    
     if (amountInCents > currentBalance) {
       notify("Insufficient balance", "warn");
       return;
@@ -208,10 +211,7 @@ export default function SendMoneyModal({
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg font-medium"
                 style={{ color: "#000000" }}
               >
-                {(() => {
-                  const { symbol } = updateCurrency(0, currency);
-                  return symbol;
-                })()}
+                {getCurrencySymbol(currency)}
               </span>
               <input
                 type="text"
@@ -261,10 +261,7 @@ export default function SendMoneyModal({
               <>
                 <Send className="w-5 h-5" />
                 <span>
-                  Send {(() => {
-                    const { symbol } = updateCurrency(0, currency);
-                    return `${symbol}${amount || "0.00"}`;
-                  })()}
+                  Send {getCurrencySymbol(currency)}{amount || "0.00"}
                 </span>
               </>
             )}
