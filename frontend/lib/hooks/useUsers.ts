@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import apiService from "../apiService";
+import apiService, { UserData } from "../apiService";
+import { authKeys } from "./useAuth";
 
 export const userKeys = {
   all: ["users"] as const,
@@ -14,7 +15,7 @@ export const useSearchUsers = (query: string) => {
     queryKey: userKeys.search(query),
     queryFn: () => apiService.searchUsers(query),
     enabled: query.length >= 3,
-    staleTime: 1000 * 60 * 2, 
+    staleTime: 1000 * 60 * 2,
   });
 };
 
@@ -43,6 +44,31 @@ export const useRemoveFriend = () => {
     mutationFn: (friendId: number) => apiService.removeFriend(friendId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.friends });
+    },
+  });
+};
+
+export const useUpdateUserCurrency = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (currency: string) => apiService.updateUserCurrency(currency),
+    onSuccess: (_data, currency) => {
+      queryClient.setQueryData(
+        authKeys.currentUser,
+        (oldUserData: UserData | undefined) => {
+          if (oldUserData && typeof oldUserData === "object") {
+            return { ...oldUserData, currency };
+          }
+          return oldUserData;
+        }
+      );
+
+      queryClient.invalidateQueries({ queryKey: authKeys.currentUser });
+    },
+    onError: (error) => {
+      console.error("Failed to update currency:", error);
+      queryClient.invalidateQueries({ queryKey: authKeys.currentUser });
     },
   });
 };

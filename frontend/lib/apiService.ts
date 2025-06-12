@@ -29,6 +29,7 @@ export interface UserData {
   name: string;
   email: string;
   balance: number;
+  currency: string;
   auth_provider: string;
   avatar?: string;
   created_at: string;
@@ -93,6 +94,11 @@ export interface AddMoneyResponse {
   fee: number;
   new_balance: number;
   transaction_id: number;
+}
+
+export interface UpdateUserCurrencyResponse {
+  message: string;
+  currency: string;
 }
 
 class ApiService {
@@ -249,6 +255,23 @@ class ApiService {
     } catch (error: unknown) {
       throw new Error(
         error instanceof Error ? error.message : "Failed to fetch balance"
+      );
+    }
+  }
+
+  async updateUserCurrency(
+    currency: string
+  ): Promise<UpdateUserCurrencyResponse> {
+    try {
+      const response: AxiosResponse<UpdateUserCurrencyResponse> =
+        await this.api.put("/api/user/currency", { currency: currency });
+
+      return response.data;
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update user currency"
       );
     }
   }
