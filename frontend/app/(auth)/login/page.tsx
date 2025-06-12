@@ -36,7 +36,6 @@ export default function LoginPage() {
 
       console.log("Login successful:", response.message);
 
-      // Redirect to dashboard on successful login
       router.push("/dashboard");
     } catch (err) {
       const errorMessage =

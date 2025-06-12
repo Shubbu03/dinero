@@ -178,7 +178,6 @@ export default function AddMoneyModal({
     if (!amount || parseFloat(amount) <= 0) return;
 
     try {
-      // Convert user input amount to USD cents for storage
       const amountInUserCurrency = parseFloat(amount);
       const amountInUSD = convertToUSD(amountInUserCurrency, currency);
       const amountInCents = Math.round(amountInUSD * 100);
@@ -199,7 +198,6 @@ export default function AddMoneyModal({
     if (!amount || parseFloat(amount) <= 0) return;
 
     try {
-      // Convert user input amount to USD cents for storage
       const amountInUserCurrency = parseFloat(amount);
       const amountInUSD = convertToUSD(amountInUserCurrency, currency);
       const amountInCents = Math.round(amountInUSD * 100);

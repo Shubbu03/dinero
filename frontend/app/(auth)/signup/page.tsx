@@ -23,7 +23,6 @@ export default function SignupPage() {
   const [error, setError] = useState("");
 
   const handleSignup = async () => {
-    // Validation
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       setError("Please fill in all fields");
       return;
@@ -51,7 +50,6 @@ export default function SignupPage() {
 
       console.log("Signup successful:", response.message);
 
-      // Redirect to dashboard on successful signup
       router.push("/dashboard");
     } catch (err) {
       const errorMessage =
