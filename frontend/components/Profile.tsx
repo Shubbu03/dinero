@@ -1,7 +1,11 @@
+"use client";
+
 import apiService, { UserData } from "@/lib/apiService";
-import { User, ChevronDown, Settings, LogOut } from "lucide-react";
+import { User, ChevronDown, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
+import Image from "next/image";
+import { useUpdateUserCurrency } from "@/lib/hooks/useUsers";
 
 interface ProfileProps {
   user: UserData | null;
@@ -15,6 +19,7 @@ const Profile: React.FC<ProfileProps> = ({
   setShowProfileDropdown,
 }) => {
   const router = useRouter();
+  const { mutate: updateCurrency } = useUpdateUserCurrency();
   const handleLogout = async () => {
     try {
       await apiService.logout();
@@ -24,14 +29,30 @@ const Profile: React.FC<ProfileProps> = ({
       router.push("/");
     }
   };
+
+  const getUserImg = () => {
+    return user?.auth_provider === "email" ? (
+      <User className="w-5 h-5" style={{ color: "#000000" }} />
+    ) : (
+      <Image
+        height={40}
+        width={40}
+        src={user?.avatar || "/user.svg"}
+        alt="User Avatar"
+        className="rounded-full object-cover w-10 h-10"
+        style={{ background: "#fff" }}
+      />
+    );
+  };
+
   return (
-    <div className="relative cursor-pointer">
+    <div className="relative">
       <button
         onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-        className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors hover:bg-gray-50"
+        className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors hover:bg-gray-50 cursor-pointer"
         style={{ color: "#000000" }}
       >
-        <User className="w-5 h-5" style={{ color: "#B6B09F" }} />
+        {getUserImg()}
         <span className="text-sm font-medium">{user?.name}</span>
         <ChevronDown className="w-4 h-4" style={{ color: "#B6B09F" }} />
       </button>
@@ -44,7 +65,7 @@ const Profile: React.FC<ProfileProps> = ({
                 className="w-10 h-10 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: "#EAE4D5" }}
               >
-                <User className="w-5 h-5" style={{ color: "#000000" }} />
+                {getUserImg()}
               </div>
               <div>
                 <p className="font-medium" style={{ color: "#000000" }}>
@@ -72,37 +93,32 @@ const Profile: React.FC<ProfileProps> = ({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm" style={{ color: "#B6B09F" }}>
-                  User ID
+                  Preferred Currency
                 </span>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: "#000000" }}
+                <select
+                  className="text-sm font-medium capitalize border rounded px-1 py-1 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  style={{ color: "#000000", background: "#fff" }}
+                  value={user?.currency}
+                  onChange={(e) => {
+                    updateCurrency(e.target.value);
+                  }}
                 >
-                  #{user?.id}
-                </span>
+                  <option value="USD">USD - $</option>
+                  <option value="INR">INR - ₹</option>
+                  <option value="GBP">GBP - £</option>
+                </select>
               </div>
             </div>
 
-            <hr className="my-4" style={{ borderColor: "#EAE4D5" }} />
+            <hr className="my-2" style={{ borderColor: "#EAE4D5" }} />
 
             <div className="space-y-1">
               <button
                 onClick={() => {
                   setShowProfileDropdown(false);
-                }}
-                className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-gray-50"
-                style={{ color: "#000000" }}
-              >
-                <Settings className="w-4 h-4" />
-                <span className="text-sm">Settings</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowProfileDropdown(false);
                   handleLogout();
                 }}
-                className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-gray-50"
+                className="w-full flex items-center space-x-2 px-3 py-2 text-left rounded-lg transition-colors hover:bg-red-50 cursor-pointer"
                 style={{ color: "#000000" }}
               >
                 <LogOut className="w-4 h-4" />
