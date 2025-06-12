@@ -6,11 +6,13 @@ import { UserData } from "@/lib/apiService";
 import { useSearchUsers } from "@/lib/hooks/useUsers";
 import { useSendMoney } from "@/lib/hooks/useTransactions";
 import { notify } from "@/lib/notify";
+import { updateCurrency } from "@/lib/currency";
 
 interface SendMoneyModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentBalance: number;
+  currency: string;
   preselectedUser?: UserData | null;
 }
 
@@ -18,6 +20,7 @@ export default function SendMoneyModal({
   isOpen,
   onClose,
   currentBalance,
+  currency,
   preselectedUser = null,
 }: SendMoneyModalProps) {
   const [amount, setAmount] = useState("");
@@ -122,9 +125,14 @@ export default function SendMoneyModal({
             <p className="text-sm" style={{ color: "#B6B09F" }}>
               Available Balance
             </p>
-            <p className="text-2xl font-bold" style={{ color: "#000000" }}>
-              ${(currentBalance / 100).toFixed(2)}
-            </p>
+            {(() => {
+              const { amount, symbol } = updateCurrency(currentBalance / 100, currency);
+              return (
+                <p className="text-2xl font-bold" style={{ color: "#000000" }}>
+                  {symbol}{amount.toFixed(2)}
+                </p>
+              );
+            })()}
           </div>
 
           <div className="space-y-2">
@@ -200,7 +208,10 @@ export default function SendMoneyModal({
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg font-medium"
                 style={{ color: "#000000" }}
               >
-                $
+                {(() => {
+                  const { symbol } = updateCurrency(0, currency);
+                  return symbol;
+                })()}
               </span>
               <input
                 type="text"
@@ -249,7 +260,12 @@ export default function SendMoneyModal({
             ) : (
               <>
                 <Send className="w-5 h-5" />
-                <span>Send ${amount || "0.00"}</span>
+                <span>
+                  Send {(() => {
+                    const { symbol } = updateCurrency(0, currency);
+                    return `${symbol}${amount || "0.00"}`;
+                  })()}
+                </span>
               </>
             )}
           </button>
