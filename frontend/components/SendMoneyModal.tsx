@@ -100,7 +100,7 @@ export default function SendMoneyModal({
       }`}
     >
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col transform transition-transform duration-300 ${
+        className={`bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[100vh] flex flex-col transform transition-transform duration-300 ${
           isOpen ? "scale-100" : "scale-95"
         }`}
         style={{ backgroundColor: "#FFFFFF" }}

@@ -9,8 +9,8 @@ import AuthWrapper from "../../../components/AuthWrapper";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("encore@sm.com");
+  const [password, setPassword] = useState("encore@tbsm4l");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -70,6 +70,7 @@ export default function LoginPage() {
               <label className="flex items-center">
                 <input
                   type="checkbox"
+                  checked
                   className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                 />
                 <span className="ml-2 text-sm" style={{ color: "#B6B09F" }}>
