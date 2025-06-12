@@ -7,8 +7,9 @@ import { useRemoveFriend } from "@/lib/hooks/useUsers";
 
 interface FriendsCardProps {
   friends: UserData[];
+  currency: string
 }
-const FriendsCard: React.FC<FriendsCardProps> = ({ friends }) => {
+const FriendsCard: React.FC<FriendsCardProps> = ({ friends,currency }) => {
   const [showSendMoneyModal, setShowSendMoneyModal] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<UserData | null>(null);
   const { data: balanceData } = useUserBalance();
@@ -81,7 +82,7 @@ const FriendsCard: React.FC<FriendsCardProps> = ({ friends }) => {
                   </button>
                   {popoverOpenId === friend.id && (
                     <div
-                      className="absolute right-0 z-10 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg p-4 flex flex-col items-center space-y-3"
+                      className="absolute right-0 z-10 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-2 sm:mb-0 w-52 bg-white border border-gray-200 rounded-xl shadow-lg p-4 flex flex-col items-center space-y-3"
                       style={{ minWidth: 200 }}
                     >
                       <span className="text-sm text-gray-900 text-center">
@@ -116,6 +117,7 @@ const FriendsCard: React.FC<FriendsCardProps> = ({ friends }) => {
         isOpen={showSendMoneyModal}
         onClose={() => setShowSendMoneyModal(false)}
         currentBalance={currentBalance}
+        currency={currency}
         preselectedUser={selectedFriend}
       />
     </div>
