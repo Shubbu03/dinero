@@ -13,11 +13,13 @@ import { useAddMoney } from "@/lib/hooks/useTransactions";
 import { useCards, useAddMoneyWithCard } from "@/lib/hooks/useCards";
 import { AddCardRequest } from "@/lib/apiService";
 import { notify } from "@/lib/notify";
+import { updateCurrency, convertToUSD, getCurrencySymbol } from "@/lib/currency";
 
 interface AddMoneyModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentBalance: number;
+  currency: string;
 }
 
 interface NewCardForm {
@@ -32,6 +34,7 @@ export default function AddMoneyModal({
   isOpen,
   onClose,
   currentBalance,
+  currency,
 }: AddMoneyModalProps) {
   const [currentScene, setCurrentScene] = useState<"amount" | "card">("amount");
   const [amount, setAmount] = useState("");
@@ -50,7 +53,7 @@ export default function AddMoneyModal({
   const [useNewCard, setUseNewCard] = useState(false);
 
   const { data: existingCards = [], isLoading: cardsLoading } = useCards();
-  const addMoneyMutation = useAddMoney(); 
+  const addMoneyMutation = useAddMoney();
   const addMoneyWithCardMutation = useAddMoneyWithCard();
 
   const paymentMethods = [
@@ -175,11 +178,17 @@ export default function AddMoneyModal({
     if (!amount || parseFloat(amount) <= 0) return;
 
     try {
-      const amountInCents = Math.round(parseFloat(amount) * 100);
+      // Convert user input amount to USD cents for storage
+      const amountInUserCurrency = parseFloat(amount);
+      const amountInUSD = convertToUSD(amountInUserCurrency, currency);
+      const amountInCents = Math.round(amountInUSD * 100);
+      
       await addMoneyMutation.mutateAsync(amountInCents);
       setAmount("");
       onClose();
-      notify(`$${amount} added successfully via UPI!`, "success");
+      
+      const symbol = getCurrencySymbol(currency);
+      notify(`${symbol}${amountInUserCurrency.toFixed(2)} added successfully via UPI!`, "success");
     } catch (error) {
       console.error("Failed to add money:", error);
       notify("Failed to add money. Please try again.", "error");
@@ -190,7 +199,10 @@ export default function AddMoneyModal({
     if (!amount || parseFloat(amount) <= 0) return;
 
     try {
-      const amountInCents = Math.round(parseFloat(amount) * 100);
+      // Convert user input amount to USD cents for storage
+      const amountInUserCurrency = parseFloat(amount);
+      const amountInUSD = convertToUSD(amountInUserCurrency, currency);
+      const amountInCents = Math.round(amountInUSD * 100);
 
       if (useNewCard) {
         const { cardNumber, expiryMonth, expiryYear, cvv, holderName } =
@@ -208,40 +220,30 @@ export default function AddMoneyModal({
           holder_name: holderName.trim(),
         };
 
-        console.log("🔍 Sending card data to backend:", {
-          card_number_length: cardData.card_number.length,
-          cvv_length: cardData.cvv.length,
-          card_data: {
-            ...cardData,
-            card_number:
-              cardData.card_number.substring(0, 4) +
-              "****" +
-              cardData.card_number.substring(12),
-          },
-        });
-
+        const symbol = getCurrencySymbol(currency);
         await addMoneyWithCardMutation.mutateAsync({
           amount: amountInCents,
-          description: `Added $${amount} via new card`,
+          description: `Added ${symbol}${amountInUserCurrency.toFixed(2)} via new card`,
           card_data: cardData,
         });
-
       } else {
         if (!selectedExistingCard) {
           notify("Please select a card", "warn");
           return;
         }
 
+        const symbol = getCurrencySymbol(currency);
         await addMoneyWithCardMutation.mutateAsync({
           amount: amountInCents,
-          description: `Added $${amount} via saved card`,
+          description: `Added ${symbol}${amountInUserCurrency.toFixed(2)} via saved card`,
           card_id: parseInt(selectedExistingCard),
         });
       }
 
       setAmount("");
       onClose();
-      notify(`$${amount} added successfully!`, "success");
+      const symbol = getCurrencySymbol(currency);
+      notify(`${symbol}${amountInUserCurrency.toFixed(2)} added successfully!`, "success");
     } catch (error) {
       console.error("Failed to add money:", error);
       notify(
@@ -270,15 +272,6 @@ export default function AddMoneyModal({
       cvv.length <= 4 &&
       holderName.trim().length >= 2
     );
-  };
-
-  const getButtonText = () => {
-    if (currentScene === "amount") {
-      return selectedMethod === "card"
-        ? "Proceed to Add"
-        : `Add $${amount || "0.00"}`;
-    }
-    return `Add $${amount || "0.00"}`;
   };
 
   const handleButtonClick = () => {
@@ -357,9 +350,14 @@ export default function AddMoneyModal({
             <p className="text-sm" style={{ color: "#B6B09F" }}>
               Current Balance
             </p>
-            <p className="text-2xl font-bold" style={{ color: "#000000" }}>
-              ${(currentBalance / 100).toFixed(2)}
-            </p>
+            {(() => {
+              const { amount, symbol } = updateCurrency(currentBalance / 100, currency);
+              return (
+                <p className="text-2xl font-bold" style={{ color: "#000000" }}>
+                  {symbol}{amount.toFixed(2)}
+                </p>
+              );
+            })()}
           </div>
 
           {currentScene === "amount" ? (
@@ -376,7 +374,7 @@ export default function AddMoneyModal({
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg font-medium"
                     style={{ color: "#000000" }}
                   >
-                    $
+                    {getCurrencySymbol(currency)}
                   </span>
                   <input
                     type="text"
@@ -417,7 +415,7 @@ export default function AddMoneyModal({
                             : "#000000",
                       }}
                     >
-                      ${quickAmount}
+                      {getCurrencySymbol(currency)}{quickAmount}
                     </button>
                   ))}
                 </div>
@@ -490,14 +488,20 @@ export default function AddMoneyModal({
                   >
                     <div className="flex justify-between text-sm">
                       <span style={{ color: "#B6B09F" }}>Amount:</span>
-                      <span style={{ color: "#000000" }}>${amount}</span>
+                      <span style={{ color: "#000000" }}>
+                        {getCurrencySymbol(currency)}{amount}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span style={{ color: "#B6B09F" }}>
                         Processing Fee (1.4%):
                       </span>
                       <span style={{ color: "#000000" }}>
-                        ${(parseFloat(amount) * 0.014).toFixed(2)}
+                        {(() => {
+                          const amt = parseFloat(amount) || 0;
+                          const fee = amt * 0.014;
+                          return `${getCurrencySymbol(currency)}${fee.toFixed(2)}`;
+                        })()}
                       </span>
                     </div>
                     <hr className="my-2" style={{ borderColor: "#EAE4D5" }} />
@@ -506,7 +510,11 @@ export default function AddMoneyModal({
                         Total to be charged:
                       </span>
                       <span style={{ color: "#000000" }}>
-                        ${(parseFloat(amount) * 1.014).toFixed(2)}
+                        {(() => {
+                          const amt = parseFloat(amount) || 0;
+                          const total = amt + amt * 0.014;
+                          return `${getCurrencySymbol(currency)}${total.toFixed(2)}`;
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -520,21 +528,23 @@ export default function AddMoneyModal({
               >
                 <div className="flex justify-between text-sm font-medium">
                   <span style={{ color: "#000000" }}>Amount to Add:</span>
-                  <span style={{ color: "#000000" }}>${amount}</span>
+                  <span style={{ color: "#000000" }}>
+                    {getCurrencySymbol(currency)}{amount}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span style={{ color: "#B6B09F" }}>
                     Processing Fee (1.4%):
                   </span>
                   <span style={{ color: "#000000" }}>
-                    ${(parseFloat(amount) * 0.014).toFixed(2)}
+                    {getCurrencySymbol(currency)}{(parseFloat(amount) * 0.014).toFixed(2)}
                   </span>
                 </div>
                 <hr className="my-2" style={{ borderColor: "#EAE4D5" }} />
                 <div className="flex justify-between text-sm font-medium">
                   <span style={{ color: "#000000" }}>Total to be charged:</span>
                   <span style={{ color: "#000000" }}>
-                    ${(parseFloat(amount) * 1.014).toFixed(2)}
+                    {getCurrencySymbol(currency)}{(parseFloat(amount) * 1.014).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -691,10 +701,7 @@ export default function AddMoneyModal({
                   className="flex-1 h-px"
                   style={{ backgroundColor: "#EAE4D5" }}
                 ></div>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: "#B6B09F" }}
-                >
+                <span className="text-sm font-medium" style={{ color: "#B6B09F" }}>
                   OR
                 </span>
                 <div
@@ -874,7 +881,16 @@ export default function AddMoneyModal({
             ) : (
               <>
                 <Plus className="w-5 h-5" />
-                <span>{getButtonText()}</span>
+                <span>{(() => {
+                  const amt = parseFloat(amount) || 0;
+                  const symbol = getCurrencySymbol(currency);
+                  if (currentScene === "amount") {
+                    return selectedMethod === "card"
+                      ? "Proceed to Add"
+                      : `Add ${symbol}${amt.toFixed(2)}`;
+                  }
+                  return `Add ${symbol}${amt.toFixed(2)}`;
+                })()}</span>
               </>
             )}
           </button>
