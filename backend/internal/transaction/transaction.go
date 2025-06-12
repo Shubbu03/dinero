@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 
+	"paytm/internal/middleware"
 	"paytm/internal/models"
 )
 
@@ -24,14 +24,15 @@ type AddBalanceRequest struct {
 }
 
 type TransactionResponse struct {
-	ID          uint            `json:"id"`
-	SenderID    uint            `json:"sender_id"`
-	ReceiverID  uint            `json:"receiver_id"`
-	Amount      int64           `json:"amount"`
-	Description string          `json:"description"`
-	Timestamp   time.Time       `json:"timestamp"`
-	Sender      TransactionUser `json:"sender"`
-	Receiver    TransactionUser `json:"receiver"`
+	ID          uint             `json:"id"`
+	SenderID    uint             `json:"sender_id"`
+	ReceiverID  uint             `json:"receiver_id"`
+	Amount      int64            `json:"amount"`
+	Description string           `json:"description"`
+	Type        string           `json:"type"`
+	Timestamp   time.Time        `json:"timestamp"`
+	Sender      *TransactionUser `json:"sender"`
+	Receiver    TransactionUser  `json:"receiver"`
 }
 
 type TransactionUser struct {
@@ -59,7 +60,11 @@ func SendMoneyHandler(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "User not found in context", http.StatusUnauthorized)
+			return
+		}
 
 		if req.Amount <= 0 {
 			http.Error(w, "Amount must be greater than 0", http.StatusBadRequest)
@@ -113,11 +118,19 @@ func SendMoneyHandler(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
+		var transactionType models.TransactionType
+		if currentUser.ID == sender.ID {
+			transactionType = models.TransactionSent
+		} else {
+			transactionType = models.TransactionReceived
+		}
+
 		transaction := models.Transaction{
 			SenderID:    sender.ID,
 			ReceiverID:  receiver.ID,
 			Amount:      req.Amount,
 			Description: req.Description,
+			Type:        transactionType,
 			Timestamp:   time.Now(),
 		}
 
@@ -139,7 +152,7 @@ func SendMoneyHandler(db *gorm.DB) http.HandlerFunc {
 			Amount:      transaction.Amount,
 			Description: transaction.Description,
 			Timestamp:   transaction.Timestamp,
-			Sender: TransactionUser{
+			Sender: &TransactionUser{
 				ID:    sender.ID,
 				Name:  sender.Name,
 				Email: sender.Email,
@@ -158,7 +171,11 @@ func SendMoneyHandler(db *gorm.DB) http.HandlerFunc {
 
 func GetTransactionHistoryHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "User not found in context", http.StatusUnauthorized)
+			return
+		}
 
 		page := 1
 		if pageStr := r.URL.Query().Get("page"); pageStr != "" {
@@ -180,11 +197,11 @@ func GetTransactionHistoryHandler(db *gorm.DB) http.HandlerFunc {
 		var total int64
 
 		db.Model(&models.Transaction{}).
-			Where("sender_id = ? OR receiver_id = ?", currentUser.ID, currentUser.ID).
+			Where("sender_id = ? OR receiver_id = ? OR (sender_id IS NULL AND receiver_id = ?)", currentUser.ID, currentUser.ID, currentUser.ID).
 			Count(&total)
 
 		if err := db.Preload("Sender").Preload("Receiver").
-			Where("sender_id = ? OR receiver_id = ?", currentUser.ID, currentUser.ID).
+			Where("sender_id = ? OR receiver_id = ? OR (sender_id IS NULL AND receiver_id = ?)", currentUser.ID, currentUser.ID, currentUser.ID).
 			Order("timestamp DESC").
 			Limit(limit).
 			Offset(offset).
@@ -195,9 +212,9 @@ func GetTransactionHistoryHandler(db *gorm.DB) http.HandlerFunc {
 
 		var transactionResponses []TransactionResponse
 		for _, transaction := range transactions {
-			senderInfo := TransactionUser{}
-			if transaction.Sender.ID != 0 {
-				senderInfo = TransactionUser{
+			var senderInfo *TransactionUser
+			if transaction.Sender != nil && transaction.Sender.ID != 0 {
+				senderInfo = &TransactionUser{
 					ID:    transaction.Sender.ID,
 					Name:  transaction.Sender.Name,
 					Email: transaction.Sender.Email,
@@ -210,6 +227,7 @@ func GetTransactionHistoryHandler(db *gorm.DB) http.HandlerFunc {
 				ReceiverID:  transaction.ReceiverID,
 				Amount:      transaction.Amount,
 				Description: transaction.Description,
+				Type:        string(transaction.Type),
 				Timestamp:   transaction.Timestamp,
 				Sender:      senderInfo,
 				Receiver: TransactionUser{
@@ -233,52 +251,13 @@ func GetTransactionHistoryHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func GetTransactionByIDHandler(db *gorm.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		transactionIDStr := chi.URLParam(r, "transactionID")
-		transactionID, err := strconv.ParseUint(transactionIDStr, 10, 32)
-		if err != nil {
-			http.Error(w, "Invalid transaction ID", http.StatusBadRequest)
-			return
-		}
-
-		currentUser := r.Context().Value("user").(*models.User)
-
-		var transaction models.Transaction
-		if err := db.Preload("Sender").Preload("Receiver").
-			Where("id = ? AND (sender_id = ? OR receiver_id = ?)", uint(transactionID), currentUser.ID, currentUser.ID).
-			First(&transaction).Error; err != nil {
-			http.Error(w, "Transaction not found", http.StatusNotFound)
-			return
-		}
-
-		response := TransactionResponse{
-			ID:          transaction.ID,
-			SenderID:    transaction.SenderID,
-			ReceiverID:  transaction.ReceiverID,
-			Amount:      transaction.Amount,
-			Description: transaction.Description,
-			Timestamp:   transaction.Timestamp,
-			Sender: TransactionUser{
-				ID:    transaction.Sender.ID,
-				Name:  transaction.Sender.Name,
-				Email: transaction.Sender.Email,
-			},
-			Receiver: TransactionUser{
-				ID:    transaction.Receiver.ID,
-				Name:  transaction.Receiver.Name,
-				Email: transaction.Receiver.Email,
-			},
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	}
-}
-
 func GetBalanceHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "User not found in context", http.StatusUnauthorized)
+			return
+		}
 
 		var user models.User
 		if err := db.First(&user, currentUser.ID).Error; err != nil {
@@ -303,7 +282,11 @@ func AddBalanceHandler(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "User not found in context", http.StatusUnauthorized)
+			return
+		}
 
 		if req.Amount <= 0 {
 			http.Error(w, "Amount must be greater than 0", http.StatusBadRequest)
@@ -333,9 +316,10 @@ func AddBalanceHandler(db *gorm.DB) http.HandlerFunc {
 		}
 
 		transaction := models.Transaction{
-			SenderID:    0, // to self
+			SenderID:    user.ID,
 			ReceiverID:  user.ID,
 			Amount:      req.Amount,
+			Type:        "self",
 			Description: "Balance added: " + req.Description,
 			Timestamp:   time.Now(),
 		}
