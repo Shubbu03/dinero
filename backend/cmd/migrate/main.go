@@ -26,6 +26,7 @@ func main() {
 	log.Println("Running database migrations...")
 	err = database.AutoMigrate(
 		&models.User{},
+		&models.Card{},
 		&models.Transaction{},
 	)
 	if err != nil {
