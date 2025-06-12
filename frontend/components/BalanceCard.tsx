@@ -3,22 +3,27 @@ import AddMoneyModal from "./AddMoneyModal";
 import FindFriendsModal from "./FindFriendsModal";
 import SendMoneyModal from "./SendMoneyModal";
 import { useState } from "react";
+import { updateCurrency } from "@/lib/currency";
 
 interface BalanceCardProps {
   balance: number;
+  currency: string;
 }
 
-const BalanceCard: React.FC<BalanceCardProps> = ({ balance }) => {
+const BalanceCard: React.FC<BalanceCardProps> = ({ balance, currency }) => {
   const [showSendMoneyModal, setShowSendMoneyModal] = useState(false);
   const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
   const [showFindFriendsModal, setShowFindFriendsModal] = useState(false);
+
+  const updatedData = updateCurrency(balance, currency);
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6 mb-4">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold" style={{ color: "#000000" }}>
-            ${(balance / 100).toFixed(2)}
+            {updatedData.symbol}
+            {(updatedData.amount / 100).toFixed(2)}
           </h2>
           <p className="text-sm" style={{ color: "#B6B09F" }}>
             Available Balance
@@ -47,7 +52,7 @@ const BalanceCard: React.FC<BalanceCardProps> = ({ balance }) => {
           disabled={balance >= 200000}
           aria-label={
             balance >= 200000
-              ? "Cannot add money when balance exceeds $1000"
+              ? "Cannot add money when balance exceeds $2000"
               : "Add money to your wallet"
           }
           className="flex items-center justify-center space-x-3 p-4 rounded-xl transition-all hover:scale-105 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
@@ -71,12 +76,14 @@ const BalanceCard: React.FC<BalanceCardProps> = ({ balance }) => {
         isOpen={showSendMoneyModal}
         onClose={() => setShowSendMoneyModal(false)}
         currentBalance={balance || 0}
+        currency={currency}
       />
 
       <AddMoneyModal
         isOpen={showAddMoneyModal}
         onClose={() => setShowAddMoneyModal(false)}
         currentBalance={balance || 0}
+        currency={currency}
       />
 
       <FindFriendsModal
