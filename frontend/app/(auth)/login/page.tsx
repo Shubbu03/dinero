@@ -3,12 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  AuthCard,
-  GoogleButton,
-  InputField,
-  SubmitButton,
-} from "../../components/AuthCard";
+import { AuthCard, InputField, SubmitButton } from "../../components/AuthCard";
 import apiService from "../../../lib/apiService";
 import AuthWrapper from "../../../components/AuthWrapper";
 
@@ -47,10 +42,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    window.location.href = apiService.getGoogleAuthUrl();
-  };
-
   return (
     <AuthWrapper requireAuth={false}>
       <AuthCard
@@ -58,25 +49,6 @@ export default function LoginPage() {
         subtitle="Sign in to your account to continue"
       >
         <div className="space-y-4">
-          <GoogleButton onClick={handleGoogleLogin} />
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div
-                className="w-full border-t"
-                style={{ borderColor: "#EAE4D5" }}
-              ></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span
-                className="px-2 bg-white"
-                style={{ color: "#B6B09F", backgroundColor: "#FFFFFF" }}
-              >
-                Or continue with email
-              </span>
-            </div>
-          </div>
-
           <div className="space-y-4 mt-6">
             <InputField
               type="email"
