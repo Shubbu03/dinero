@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 
+	"paytm/internal/middleware"
 	"paytm/internal/models"
 )
 
@@ -26,6 +27,15 @@ type UserProfile struct {
 	Email string `json:"email"`
 }
 
+type UpdateUserCurrencyRequest struct {
+	Currency string `json:"currency"`
+}
+
+type UpdateUserCurrencyResponse struct {
+	Message  string `json:"message"`
+	Currency string `json:"currency"`
+}
+
 func SearchUsersHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query().Get("q")
@@ -34,7 +44,11 @@ func SearchUsersHandler(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "Could not retrieve user from context", http.StatusInternalServerError)
+			return
+		}
 
 		var users []models.User
 		searchTerm := "%" + strings.ToLower(query) + "%"
@@ -68,7 +82,11 @@ func AddFriendHandler(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "Could not retrieve user from context", http.StatusInternalServerError)
+			return
+		}
 
 		if req.FriendID == currentUser.ID {
 			http.Error(w, "Cannot add yourself as friend", http.StatusBadRequest)
@@ -104,7 +122,11 @@ func AddFriendHandler(db *gorm.DB) http.HandlerFunc {
 
 func GetFriendsHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "Could not retrieve user from context", http.StatusInternalServerError)
+			return
+		}
 
 		var user models.User
 		if err := db.Preload("Friends").First(&user, currentUser.ID).Error; err != nil {
@@ -135,7 +157,11 @@ func RemoveFriendHandler(db *gorm.DB) http.HandlerFunc {
 			return
 		}
 
-		currentUser := r.Context().Value("user").(*models.User)
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "Could not retrieve user from context", http.StatusInternalServerError)
+			return
+		}
 
 		var friend models.User
 		if err := db.First(&friend, uint(friendID)).Error; err != nil {
@@ -181,5 +207,32 @@ func GetUserByIDHandler(db *gorm.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(userProfile)
+	}
+}
+
+func UpdateUserCurrencyHandler(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req UpdateUserCurrencyRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Currency == "" {
+			http.Error(w, "Invalid or missing currency", http.StatusBadRequest)
+			return
+		}
+
+		currentUser, ok := middleware.GetUserFromContext(r)
+		if !ok {
+			http.Error(w, "User not found in context", http.StatusInternalServerError)
+			return
+		}
+
+		if err := db.Model(currentUser).Update("currency", req.Currency).Error; err != nil {
+			http.Error(w, "Failed to update currency", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"message":  "Currency updated successfully",
+			"currency": req.Currency,
+		})
 	}
 }
