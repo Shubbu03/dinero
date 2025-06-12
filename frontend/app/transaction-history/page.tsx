@@ -61,12 +61,12 @@ export default function TransactionHistory() {
               className="text-2xl font-bold cursor-pointer"
               style={{ color: "#000000" }}
             >
-              paytm
+              dinero
             </h1>
           </div>
         </div>
       </header>
-      <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-[1370px]">
+      <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-[1370px] mx-4 sm:mx-6 lg:mx-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <button
@@ -102,35 +102,34 @@ export default function TransactionHistory() {
                 <div className="flex items-center space-x-3">
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${
-                      transaction.sender_id === currentUserID
+                      transaction.type === "self"
+                        ? "bg-green-100"
+                        : transaction.sender_id === currentUserID
                         ? "bg-red-100"
                         : "bg-green-100"
                     }`}
                   >
-                    {transaction.sender_id === currentUserID ? (
+                    {transaction.type === "self" ? (
+                      <Plus className="w-5 h-5 text-green-600" />
+                    ) : transaction.sender_id === currentUserID ? (
                       <ArrowUpRight className="w-5 h-5 text-red-600" />
                     ) : transaction.receiver_id === currentUserID ? (
                       <ArrowDownLeft className="w-5 h-5 text-green-600" />
-                    ) : transaction.type === "self" ? (
-                      <Plus className="w-5 h-5 text-green-600" />
                     ) : null}
                   </div>
                   <div>
                     <p className="font-medium" style={{ color: "#000000" }}>
-                      {transaction.sender_id === currentUserID
+                      {transaction.type === "self"
+                        ? `Self`
+                        : transaction.sender_id === currentUserID
                         ? `To ${transaction.receiver.name}`
                         : transaction.receiver_id === currentUserID
                         ? `From ${transaction.sender.name}`
-                        : transaction.type === "self"
-                        ? `Self`
                         : null}
                     </p>
                     <div>
                       <p className="text-xs" style={{ color: "#B6B09F" }}>
                         {new Date(transaction.timestamp).toLocaleDateString()}
-                        {transaction.description ? (
-                          <> | {transaction.description}</>
-                        ) : null}
                       </p>
                     </div>
                   </div>
@@ -144,12 +143,14 @@ export default function TransactionHistory() {
                     return (
                       <p
                         className={`font-semibold text-lg ${
-                          transaction.sender_id === currentUserID
+                          transaction.type === "self"
+                            ? "text-green-600"
+                            : transaction.sender_id === currentUserID
                             ? "text-red-600"
                             : "text-green-600"
                         }`}
                       >
-                        {transaction.sender_id === currentUserID ? "-" : "+"}
+                        {transaction.type === "self" || transaction.receiver_id === currentUserID ? "+" : "-"}
                         {symbol}
                         {amount.toFixed(2)}
                       </p>

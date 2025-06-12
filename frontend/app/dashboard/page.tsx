@@ -47,7 +47,7 @@ export default function DashboardPage() {
                 className="text-2xl font-bold cursor-pointer"
                 style={{ color: "#000000" }}
               >
-                paytm
+                dinero
               </h1>
 
               <Profile
@@ -70,7 +70,7 @@ export default function DashboardPage() {
               />
             </div>
             <div>
-              <FriendsCard friends={friends} />
+              <FriendsCard friends={friends} currency={user.currency}/>
             </div>
           </div>
         </div>

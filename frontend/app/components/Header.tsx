@@ -12,7 +12,7 @@ export function Header() {
         style={{ color: "#000000" }}
         onClick={() => router.push("/")}
       >
-        paytm
+        dinero
         <span
           className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"
           style={{ backgroundColor: "#B6B09F" }}
