@@ -115,9 +115,10 @@ func SignupWithEmail(db *gorm.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":      "User created and logged in successfully",
-			"access_token": tokens.AccessToken,
-			"expires_in":   tokens.ExpiresIn,
+			"message":       "User created and logged in successfully",
+			"access_token":  tokens.AccessToken,
+			"refresh_token": tokens.RefreshToken,
+			"expires_in":    tokens.ExpiresIn,
 		})
 	}
 }
@@ -153,9 +154,10 @@ func LoginWithEmail(db *gorm.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":      "Logged in successfully",
-			"access_token": tokens.AccessToken,
-			"expires_in":   tokens.ExpiresIn,
+			"message":       "Logged in successfully",
+			"access_token":  tokens.AccessToken,
+			"refresh_token": tokens.RefreshToken,
+			"expires_in":    tokens.ExpiresIn,
 		})
 	}
 }
@@ -171,13 +173,21 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 
 func RefreshTokenHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("refresh_token")
-		if err != nil {
-			http.Error(w, "No refresh token provided", http.StatusUnauthorized)
-			return
+		var refreshToken string
+		
+		authHeader := r.Header.Get("Authorization")
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer refresh ") {
+			refreshToken = strings.TrimPrefix(authHeader, "Bearer refresh ")
+		} else {
+			cookie, err := r.Cookie("refresh_token")
+			if err != nil {
+				http.Error(w, "No refresh token provided", http.StatusUnauthorized)
+				return
+			}
+			refreshToken = cookie.Value
 		}
 
-		refreshClaims, err := jwt.ValidateRefreshToken(cookie.Value)
+		refreshClaims, err := jwt.ValidateRefreshToken(refreshToken)
 		if err != nil {
 			log.Printf("Invalid refresh token: %v", err)
 			http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
@@ -207,9 +217,10 @@ func RefreshTokenHandler(db *gorm.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message":      "Tokens refreshed successfully",
-			"access_token": tokens.AccessToken,
-			"expires_in":   tokens.ExpiresIn,
+			"message":       "Tokens refreshed successfully",
+			"access_token":  tokens.AccessToken,
+			"refresh_token": tokens.RefreshToken,
+			"expires_in":    tokens.ExpiresIn,
 		})
 	}
 }

@@ -21,6 +21,7 @@ export interface SignupRequest {
 export interface AuthResponse {
   message: string;
   access_token: string;
+  refresh_token?: string;
   expires_in: number;
 }
 
@@ -166,14 +167,25 @@ class ApiService {
     return localStorage.getItem("access_token");
   }
 
+  private getRefreshTokenFromStorage(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("refresh_token");
+  }
+
   private setTokenInStorage(token: string): void {
     if (typeof window === "undefined") return;
     localStorage.setItem("access_token", token);
   }
 
+  private setRefreshTokenInStorage(refreshToken: string): void {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("refresh_token", refreshToken);
+  }
+
   private clearAuthData(): void {
     if (typeof window === "undefined") return;
     localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
@@ -186,6 +198,11 @@ class ApiService {
       if (response.data.access_token) {
         this.setTokenInStorage(response.data.access_token);
       }
+      
+      if (response.data.refresh_token) {
+        this.setRefreshTokenInStorage(response.data.refresh_token);
+      }
+      
       return response.data;
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : "Login failed");
@@ -202,6 +219,11 @@ class ApiService {
       if (response.data.access_token) {
         this.setTokenInStorage(response.data.access_token);
       }
+      
+      if (response.data.refresh_token) {
+        this.setRefreshTokenInStorage(response.data.refresh_token);
+      }
+      
       return response.data;
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : "Signup failed");
@@ -220,13 +242,30 @@ class ApiService {
 
   async refreshToken(): Promise<AuthResponse> {
     try {
+      const refreshToken = this.getRefreshTokenFromStorage();
+      
+      if (!refreshToken) {
+        throw new Error("No refresh token available");
+      }
+
       const response: AxiosResponse<AuthResponse> = await this.api.post(
-        "/auth/refresh"
+        "/auth/refresh",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer refresh ${refreshToken}`
+          }
+        }
       );
 
       if (response.data.access_token) {
         this.setTokenInStorage(response.data.access_token);
       }
+      
+      if (response.data.refresh_token) {
+        this.setRefreshTokenInStorage(response.data.refresh_token);
+      }
+      
       return response.data;
     } catch (error: unknown) {
       throw new Error(
