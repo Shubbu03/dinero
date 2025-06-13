@@ -36,7 +36,6 @@ frontend/out/
 backend/avatars/
 
 # Go build output
-**/go.sum
 **/go.work.sum
 
 # === Editor / IDE ===
