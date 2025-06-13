@@ -1,4 +1,4 @@
-# Paytm Backend API
+# Dinero Backend API
 
 A backend implementation for a Paytm-like payment application built with Go.
 
