@@ -25,10 +25,10 @@ func RegisterEnhancedRoutes(r chi.Router, db *gorm.DB) error {
 		MaxAge:           300,
 	}))
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
